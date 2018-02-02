@@ -10,7 +10,7 @@ public class AssessmentImpl implements Assessment {
 	private String information;
 	private Date closingDate;
 	private List<Question> questions;
-	Map<Integer, Integer> ourMap;
+	Map<Integer, Integer> questionToAnswerMap;
 	private int associatedID;
 	
 	// Constructor
@@ -19,7 +19,7 @@ public class AssessmentImpl implements Assessment {
 		closingDate = cDate;
 		questions = qs;
 		associatedID = id;
-		ourMap = new HashMap<Integer, Integer>();
+		questionToAnswerMap = new HashMap<Integer, Integer>();
 		
 	}
 	
@@ -46,20 +46,31 @@ public class AssessmentImpl implements Assessment {
 				question = q;
 			}
 		}
-		if (question == null) throw InvalidQuestionNumber
-		
+		if (question == null){
+			throw new InvalidQuestionNumber("Invalid question number!");
+		}
+			
 		return question;
 	}
 
 	@Override
 	public void selectAnswer(int questionNumber, int optionNumber) throws InvalidQuestionNumber, InvalidOptionNumber {
-		//Key Question Number : Option Number
-		ourMap.put(questionNumber, optionNumber);
+		//Map Key Question Number : Option Number
+		
+		Question question = getQuestion(questionNumber);
+		String[] answerOptions = question.getAnswerOptions();
+		
+		if(optionNumber < 1 || optionNumber > answerOptions.length){
+			throw new InvalidOptionNumber("Invalid Option number!");
+		}
+		else{
+			questionToAnswerMap.put(questionNumber, optionNumber);
+		}
 	}
 
 	@Override
 	public int getSelectedAnswer(int questionNumber) {
-		return ourMap.get(questionNumber);
+		return questionToAnswerMap.get(questionNumber);
 	}
 
 	@Override

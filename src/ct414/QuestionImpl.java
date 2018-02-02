@@ -7,9 +7,9 @@ public class QuestionImpl implements Question {
 	private String[] options;
 	
 	// Constructor
-	public QuestionImpl(int no, String det, String[] answers){
+	public QuestionImpl(int no, String dets, String[] answers){
 		number = no;
-		details = det;
+		details = dets;
 		options = answers;
 	}
 
