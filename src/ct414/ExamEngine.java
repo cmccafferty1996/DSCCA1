@@ -11,14 +11,17 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public class ExamEngine implements ExamServer {
 	private int[] enrolledStudentIds;
 	private String password;
 	private int token;
 	private String[] courseCodes;
+	// Might need to change this to Map<String, List<AssessmentImpl>> below -CM
 	private Map<String, AssessmentImpl> courseCodeToAssessmentMap;
 	private Map<String, Integer[]> courseCodeToStudentIdsMap;
+	private Map<Integer, List<Assessment>> completedAssessments;
 	
     // Constructor is required
     public ExamEngine() {
@@ -43,7 +46,7 @@ public class ExamEngine implements ExamServer {
         questionList.add(q3);
         AssessmentImpl a1 = new AssessmentImpl ("Math Test", new Date(2018, 2, 14), questionList, 1);
         
-        courseCodeToAssessmentMap = new HashMap<String, AssessmentImpl >();
+        courseCodeToAssessmentMap = new HashMap<String, AssessmentImpl>();
         courseCodeToAssessmentMap.put(mathCourseCode, a1);
     }
 
@@ -51,6 +54,7 @@ public class ExamEngine implements ExamServer {
     // Return an access token that allows access to the server for some time period
     public int login(int studentid, String password) throws 
                 UnauthorizedAccess, RemoteException {
+    	
     	if (!Arrays.asList(enrolledStudentIds).contains(studentid) || !this.password.equals(password)) {
     		throw new UnauthorizedAccess("Invalid Id number or password");
     	}
@@ -63,25 +67,52 @@ public class ExamEngine implements ExamServer {
     // Return a summary list of Assessments currently available for this studentid
     public List<String> getAvailableSummary(int token, int studentid) throws
                 UnauthorizedAccess, NoMatchingAssessment, RemoteException {
+    	
+    	// Token exception
     	if(this.token != token){
     		throw new UnauthorizedAccess("Invalid Access Token");
     	}
-
+    	
+    	// Assessment summary list
+    	List<String> assessmentsSummary = new ArrayList<String>();
+    	
+    	// Get the course code from studentId first
+    	String currCode = "";
+    	Integer[] studentIds;
+    	for (Entry<String, Integer[]> e : courseCodeToStudentIdsMap.entrySet()){
+    		studentIds = e.getValue();
+    		for (int i=0; i < studentIds.length-1; i++){
+    			if (studentid == studentIds[i]){
+    				currCode = e.getKey();
+    			}
+    		}
+    	}
+    	
+    	// Check for available assessments for that course code
+    	if (courseCodeToAssessmentMap.get(currCode) == null){
+    		throw new NoMatchingAssessment("No assessments found for your Id: "+studentid);
+    	} else {
+    		AssessmentImpl assessments = courseCodeToAssessmentMap.get(currCode);
+    		assessmentsSummary.add(assessments.getInformation()
+    				+" closes on:"+assessments.getClosingDate().toString());
+    	}
+   
         // TBD: You need to implement this method!
         // For the moment method just returns an empty or null value to allow it to compile
 
-        return null;
+        return assessmentsSummary;
     }
 
     // Return an Assessment object associated with a particular course code
     public Assessment getAssessment(int token, int studentid, String courseCode) throws
                 UnauthorizedAccess, NoMatchingAssessment, RemoteException {
     	
+    	// Token exception
     	if(this.token != token){
     		throw new UnauthorizedAccess("Invalid Access Token");
     	}
     	else if(!Arrays.asList(courseCodes).contains(courseCode)){
-    		throw new UnauthorizedAccess("This course doe not exist");
+    		throw new UnauthorizedAccess("This course does not exist");
     	}
     	else if(!Arrays.asList(courseCodeToStudentIdsMap.get(courseCode)).contains(studentid)){
     		throw new UnauthorizedAccess("Student Id not valid for this course");
@@ -99,11 +130,37 @@ public class ExamEngine implements ExamServer {
     // Submit a completed assessment
     public void submitAssessment(int token, int studentid, Assessment completed) throws 
                 UnauthorizedAccess, NoMatchingAssessment, RemoteException {
+    	
+    	// Token exception
     	if(this.token != token){
     		throw new UnauthorizedAccess("Invalid Access Token");
     	}
     	
-        // Add assessment to a particular student like a map from student id to a list of there assessment???
+    	// Check the assessment is still available
+    	// Meaning they have not missed the closing date/time
+    	String currCode = "";
+    	Integer[] studentIds;
+    	// Get the course code from studentId first
+    	for (Entry<String, Integer[]> e : courseCodeToStudentIdsMap.entrySet()){
+    		studentIds = e.getValue();
+    		for (int i=0; i < studentIds.length-1; i++){
+    			if (studentid == studentIds[i]){
+    				currCode = e.getKey();
+    			}
+    		}
+    	}
+    	
+    	// Check for available assessments for that course code
+    	if (courseCodeToAssessmentMap.get(currCode) == null){
+    		throw new NoMatchingAssessment("Submission closed");
+    	} else {
+    		// Add to completed list
+        	ArrayList<Assessment> updated = (ArrayList<Assessment>) completedAssessments.get(studentid);
+        	updated.add(completed);
+        	completedAssessments.put(studentid, updated);
+    	}
+    	
+        // Add assessment to a particular student like a map from student id to a list of their assessment???
     }
 
     public static void main(String[] args) {

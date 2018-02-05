@@ -41,11 +41,13 @@ public class AssessmentImpl implements Assessment {
 	@Override
 	public Question getQuestion(int questionNumber) throws InvalidQuestionNumber {
 		Question question = null;
+		
 		for (Question q : questions){
 			if (q.getQuestionNumber() == questionNumber){
 				question = q;
 			}
 		}
+		
 		if (question == null){
 			throw new InvalidQuestionNumber("Invalid question number!");
 		}
