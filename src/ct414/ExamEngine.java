@@ -158,6 +158,9 @@ public class ExamEngine implements ExamServer {
         	ArrayList<Assessment> updated = (ArrayList<Assessment>) completedAssessments.get(studentid);
         	updated.add(completed);
         	completedAssessments.put(studentid, updated);
+        	
+        	// Clear Token after submission?
+        	this.token = 0;
     	}
     	
         // Add assessment to a particular student like a map from student id to a list of their assessment???
