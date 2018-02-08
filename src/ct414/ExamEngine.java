@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 public class ExamEngine implements ExamServer {
-	private int[] enrolledStudentIds;
+	private ArrayList<Integer> enrolledStudentIds;
 	private String password;
 	private int token;
 	private String[] courseCodes;
@@ -26,7 +26,12 @@ public class ExamEngine implements ExamServer {
     // Constructor is required
     public ExamEngine() {
         super();
-        enrolledStudentIds = new int[] {1, 2, 3, 4, 5};
+        enrolledStudentIds = new ArrayList<Integer>();
+        enrolledStudentIds.add(1);
+        enrolledStudentIds.add(2);
+        enrolledStudentIds.add(3);
+        enrolledStudentIds.add(4);
+        enrolledStudentIds.add(5);
         password = "topSecret";
         token = 1;
         
@@ -55,7 +60,7 @@ public class ExamEngine implements ExamServer {
     public int login(int studentid, String password) throws 
                 UnauthorizedAccess, RemoteException {
     	
-    	if (!Arrays.asList(enrolledStudentIds).contains(studentid) || !this.password.equals(password)) {
+    	if (!enrolledStudentIds.contains(studentid) || !this.password.equals(password)) {
     		throw new UnauthorizedAccess("Invalid Id number or password");
     	}
     	
