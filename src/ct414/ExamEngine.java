@@ -149,9 +149,9 @@ public class ExamEngine implements ExamServer {
     }
 
     public static void main(String[] args) {
-        if (System.getSecurityManager() == null) {
-            System.setSecurityManager(new SecurityManager());
-        }
+//        if (System.getSecurityManager() == null) {
+//            System.setSecurityManager(new SecurityManager());
+//        }
         try {
             String name = "ExamServer";
             ExamServer engine = new ExamEngine();
