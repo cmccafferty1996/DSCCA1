@@ -77,28 +77,29 @@ public class ExamEngine implements ExamServer {
     	List<String> assessmentsSummary = new ArrayList<String>();
     	
     	// Get the course code from studentId first
-    	String currCode = "";
+    	ArrayList<String> currCodes = new ArrayList<String>();
     	Integer[] studentIds;
     	for (Entry<String, Integer[]> e : courseCodeToStudentIdsMap.entrySet()){
     		studentIds = e.getValue();
     		for (int i=0; i < studentIds.length-1; i++){
     			if (studentid == studentIds[i]){
-    				currCode = e.getKey();
+    				currCodes.add(e.getKey());
     			}
     		}
     	}
     	
     	// Check for available assessments for that course code
-    	if (courseCodeToAssessmentMap.get(currCode) == null){
-    		throw new NoMatchingAssessment("No assessments found for your Id: "+studentid);
-    	} else {
-    		AssessmentImpl assessments = courseCodeToAssessmentMap.get(currCode);
-    		assessmentsSummary.add(assessments.getInformation()
-    				+" closes on:"+assessments.getClosingDate().toString());
+    	for(String i :currCodes){
+	    	if (!(courseCodeToAssessmentMap.get(i) == null)){
+	    		AssessmentImpl assessment = courseCodeToAssessmentMap.get(currCodes);
+	    		assessmentsSummary.add(assessment.getInformation()
+	    				+" closes on:"+assessment.getClosingDate().toString());
+	    	}
     	}
-   
-        // TBD: You need to implement this method!
-        // For the moment method just returns an empty or null value to allow it to compile
+    	
+    	if (assessmentsSummary.isEmpty()){
+    		throw new NoMatchingAssessment("No assessments found for your Id: "+studentid);
+    	}
 
         return assessmentsSummary;
     }
@@ -120,9 +121,6 @@ public class ExamEngine implements ExamServer {
     	else if(courseCodeToAssessmentMap.get(courseCode) == null){
     		throw new NoMatchingAssessment("No assignment for this course");
     	}
-    	
-        // TBD: You need to implement this method!
-        // For the moment method just returns an empty or null value to allow it to compile
 
         return courseCodeToAssessmentMap.get(courseCode);
     }
@@ -138,20 +136,8 @@ public class ExamEngine implements ExamServer {
     	
     	// Check the assessment is still available
     	// Meaning they have not missed the closing date/time
-    	String currCode = "";
-    	Integer[] studentIds;
-    	// Get the course code from studentId first
-    	for (Entry<String, Integer[]> e : courseCodeToStudentIdsMap.entrySet()){
-    		studentIds = e.getValue();
-    		for (int i=0; i < studentIds.length-1; i++){
-    			if (studentid == studentIds[i]){
-    				currCode = e.getKey();
-    			}
-    		}
-    	}
-    	
-    	// Check for available assessments for that course code
-    	if (courseCodeToAssessmentMap.get(currCode) == null){
+        Date now = new Date();
+        if (completed.getClosingDate().after(now)){
     		throw new NoMatchingAssessment("Submission closed");
     	} else {
     		// Add to completed list
@@ -159,11 +145,7 @@ public class ExamEngine implements ExamServer {
         	updated.add(completed);
         	completedAssessments.put(studentid, updated);
         	
-        	// Clear Token after submission?
-        	this.token = 0;
     	}
-    	
-        // Add assessment to a particular student like a map from student id to a list of their assessment???
     }
 
     public static void main(String[] args) {
