@@ -35,6 +35,8 @@ public class ExamEngine implements ExamServer {
         password = "topSecret";
         token = 1;
         
+        completedAssessments = new HashMap<Integer, List<Assessment>>();
+        
         courseCodes = new String[] {"101", "102", "103", "104"};
         
         Integer[] mathStudentIds = new Integer[] {1, 3, 5};
@@ -73,7 +75,6 @@ public class ExamEngine implements ExamServer {
     public List<String> getAvailableSummary(int token, int studentid) throws
                 UnauthorizedAccess, NoMatchingAssessment, RemoteException {
     	
-    	// Token exception
     	if(this.token != token){
     		throw new UnauthorizedAccess("Invalid Access Token");
     	}
@@ -96,7 +97,7 @@ public class ExamEngine implements ExamServer {
     	// Check for available assessments for that course code
     	for(String i :currCodes){
 	    	if (!(courseCodeToAssessmentMap.get(i) == null)){
-	    		AssessmentImpl assessment = courseCodeToAssessmentMap.get(currCodes);
+	    		AssessmentImpl assessment = courseCodeToAssessmentMap.get(i);
 	    		assessmentsSummary.add(assessment.getInformation()
 	    				+" closes on:"+assessment.getClosingDate().toString());
 	    	}
@@ -113,7 +114,6 @@ public class ExamEngine implements ExamServer {
     public Assessment getAssessment(int token, int studentid, String courseCode) throws
                 UnauthorizedAccess, NoMatchingAssessment, RemoteException {
     	
-    	// Token exception
     	if(this.token != token){
     		throw new UnauthorizedAccess("Invalid Access Token");
     	}
@@ -134,7 +134,6 @@ public class ExamEngine implements ExamServer {
     public void submitAssessment(int token, int studentid, Assessment completed) throws 
                 UnauthorizedAccess, NoMatchingAssessment, RemoteException {
     	
-    	// Token exception
     	if(this.token != token){
     		throw new UnauthorizedAccess("Invalid Access Token");
     	}
@@ -142,15 +141,22 @@ public class ExamEngine implements ExamServer {
     	// Check the assessment is still available
     	// Meaning they have not missed the closing date/time
         Date now = new Date();
-        if (completed.getClosingDate().after(now)){
+        if (completed.getClosingDate().before(now)){
     		throw new NoMatchingAssessment("Submission closed");
-    	} else {
-    		// Add to completed list
+    	}
+        
+        try{
+        	// Add to completed list
         	ArrayList<Assessment> updated = (ArrayList<Assessment>) completedAssessments.get(studentid);
         	updated.add(completed);
         	completedAssessments.put(studentid, updated);
-        	
-    	}
+        }
+        catch(NullPointerException e){
+        	//For first completed assessment
+        	ArrayList<Assessment> newArr = new ArrayList<Assessment>();
+        	newArr.add(completed);
+        	completedAssessments.put(studentid, newArr);
+        }
     }
 
     public static void main(String[] args) {
