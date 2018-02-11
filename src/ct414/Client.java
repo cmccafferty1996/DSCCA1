@@ -3,17 +3,20 @@ package ct414;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 public class Client {
+	
+	// Declare variables
+    private static boolean validResponse = false;
+    private static Scanner in;
+    private static int studentId = 0;
+    private static ExamServer stub;
+    private static int token = 0;
 
     private Client() {}
-    
-    private static String userName;
-	private static int studentId;
-	private static int token;
-	private static ExamServer stub;
 
     public static void main(String[] args) {
 
@@ -22,39 +25,100 @@ public class Client {
             Registry registry = LocateRegistry.getRegistry(host);
             stub = (ExamServer) registry.lookup("ExamServer");
             
-            System.out.println("Username: ");
-            Scanner in = new Scanner(System.in); //add check this can be parsed to int
-            userName = in.nextLine();
-            System.out.println("Password: ");
-            String password = in.nextLine();
+            // Initialize scanner
+            in = new Scanner(System.in);
             
-            studentId = Integer.parseInt(userName);
+            // Do login
+            doLogin();
             
-            token = stub.login(studentId, password);
-            if(token == 1){
-            	System.out.println("Login Successful!");
+            // Get assessment Information
+            printAssessments();
+            
+            // Handle selected assessment
+            Assessment curr = selectAssessment();
+            
+            // If the client selects an assessment
+            if (curr != null){
+            	startAssessment(curr);
             }
-            else{
-            	System.out.println("Login Failed");
-            }
-            
-            // Print do you want to see your assessments info?
-            // Ask to start assessment, read in choice
-            // Option to submit
-            
-            // Print questions, read in answer
-            
-            Assessment a1 = stub.getAssessment(token, studentId, "101"); //replace this
-            
-            startAssessment(a1);
-            
-            
         } catch (Exception e) {
             System.err.println("Client exception: " + e.toString());
             e.printStackTrace();
         }
     }
     
+ // Private method that requests Student ID and password
+    // Attempts to login by calling login function on server
+    private static void doLogin() throws RemoteException, UnauthorizedAccess{
+    	
+    	while (!validResponse){
+        	System.out.println("Username: ");
+            String userName = in.nextLine();
+            try {
+            	studentId = Integer.parseInt(userName);
+            	validResponse = true;
+            } catch (NumberFormatException e){
+            	System.out.println("Student ID must be a number!!");
+            }
+        }
+        
+        System.out.println("Password: ");
+        String password = in.nextLine();
+        
+        token = stub.login(studentId, password);
+        if(token == 1){ // need to look at this - CM
+        	System.out.println("Login Successful!");
+        }
+        else{
+        	System.out.println("Login Failed");
+        }
+    }
+    
+    // Print all available assessments for that student
+    // There will only be one per course 
+    private static void printAssessments() throws RemoteException{
+    	
+    	// Print assessments info
+        System.out.println("Assessments available for "+studentId);
+        try {
+        	ArrayList<String> summary = 
+        			(ArrayList<String>) stub.getAvailableSummary(token, studentId);
+        	for (String s : summary){
+        		System.out.println(s);
+        	}
+        	System.out.println("Enter course code of the assessment to begin assessment:");
+        } catch (NoMatchingAssessment nma){
+        	System.out.println(nma.getMessage());
+       
+		} catch (UnauthorizedAccess uaa) {
+			System.out.println(uaa.getMessage());
+		}
+    }
+    
+    // Returns chosen assessment
+    // Client selects an assessment by typing the course code of the assessment
+    private static Assessment selectAssessment() throws RemoteException{
+    	
+    	validResponse = false;
+    	Assessment curr = null;
+        
+        while(!validResponse){
+        	String lookup = in.nextLine();
+        	try{
+        		 curr = stub.getAssessment(token, studentId, lookup);
+        		validResponse = true;
+        	} catch (UnauthorizedAccess uaa){
+        		System.out.println(uaa.getMessage());
+        	} catch (NoMatchingAssessment nma){
+        		System.out.println("Please enter a valid course code from list!");
+        		System.out.println(nma.getMessage());
+        	}
+        }
+		return curr;
+    }
+    
+    // Start selected assessment
+    // Lists all questions and asks the client to select a question to answer
     public static void startAssessment(Assessment a) throws RemoteException, UnauthorizedAccess, NoMatchingAssessment{
 		Scanner in = new Scanner(System.in);
 		
