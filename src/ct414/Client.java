@@ -11,6 +11,7 @@ public class Client {
 	
 	// Declare variables
     private static boolean validResponse = false;
+    private static String response;
     private static Scanner in;
     private static int studentId = 0;
     private static ExamServer stub;
@@ -24,24 +25,48 @@ public class Client {
         try {
             Registry registry = LocateRegistry.getRegistry(host);
             stub = (ExamServer) registry.lookup("ExamServer");
+            boolean continueFlag = false;
             
             // Initialize scanner
             in = new Scanner(System.in);
-            
             // Do login
             doLogin();
             
-            // Get assessment Information
-            printAssessments();
-            
-            // Handle selected assessment
-            Assessment curr = selectAssessment();
-            
-            // If the client selects an assessment
-            if (curr != null){
-            	startAssessment(curr);
+            while(!continueFlag){
+	            
+	            // Get assessment Information
+	            printAssessments();
+	            
+	            // Handle selected assessment
+	            Assessment curr = selectAssessment();
+	            
+	            // If the user selects an assessment
+	            if (curr != null){
+	            	startAssessment(curr);
+	            }
+	            
+	            
+	            System.out.println("\nDo you want to try another assessment?[Y/n] ");
+	            while(!validResponse){
+	    			response = in.nextLine();
+	    			response = response.replaceAll("\\s+","");
+	    			
+	    			if(!response.equals("Y") && !response.equals("n")){
+	    				System.out.println("Invalid input! Please enter \"Y\" or \"n\"\n");
+	    			}
+	    			else{
+	    				validResponse = true;
+	    				
+	    				if(response.equals("n")){
+	    		        	continueFlag = true;
+	    				}
+	    			}
+	    		}
+	            validResponse = false;
             }
-        } catch (Exception e) {
+            System.out.println("\nUser " + studentId + " logged out.");
+            in.close();
+        } catch(Exception e) {
             System.err.println("Client exception: " + e.toString());
             e.printStackTrace();
         }
@@ -49,29 +74,36 @@ public class Client {
     
  // Private method that requests Student ID and password
     // Attempts to login by calling login function on server
-    private static void doLogin() throws RemoteException, UnauthorizedAccess{
+    private static void doLogin() throws RemoteException{
     	
-    	while (!validResponse){
-        	System.out.println("Username: ");
-            String userName = in.nextLine();
-            try {
-            	studentId = Integer.parseInt(userName);
-            	validResponse = true;
-            } catch (NumberFormatException e){
-            	System.out.println("Student ID must be a number!!");
-            }
-        }
-        
-        System.out.println("Password: ");
-        String password = in.nextLine();
-        
-        token = stub.login(studentId, password);
-        if(token == 1){ // need to look at this - CM
-        	System.out.println("Login Successful!");
-        }
-        else{
-        	System.out.println("Login Failed");
-        }
+    	boolean login = false;
+    	while(!login){
+	    	while (!validResponse){
+	        	System.out.println("\nStudent ID: ");
+	            String userName = in.nextLine();
+	            try{
+	            	studentId = Integer.parseInt(userName);
+	            	validResponse = true;
+	            } 
+	            catch(NumberFormatException e){
+	            	System.out.println("Student ID must be a number!");
+	            }
+	        }
+	    	validResponse = false;
+	        
+	        System.out.println("Password: ");
+	        String password = in.nextLine();
+	        
+	        try{
+				token = stub.login(studentId, password);
+				System.out.println("\nLogin Successful!");
+				login = true;
+			} 
+	        catch(UnauthorizedAccess e) {
+				System.out.println(e.getMessage());
+				System.out.println("\nLogin Failed");
+			}
+    	}
     }
     
     // Print all available assessments for that student
@@ -79,18 +111,20 @@ public class Client {
     private static void printAssessments() throws RemoteException{
     	
     	// Print assessments info
-        System.out.println("Assessments available for "+studentId);
-        try {
+        System.out.println("\nAssessments available for "+studentId + ": ");
+        try{
         	ArrayList<String> summary = 
         			(ArrayList<String>) stub.getAvailableSummary(token, studentId);
         	for (String s : summary){
         		System.out.println(s);
         	}
-        	System.out.println("Enter course code of the assessment to begin assessment:");
-        } catch (NoMatchingAssessment nma){
+        	
+        } 
+        catch(NoMatchingAssessment nma){
         	System.out.println(nma.getMessage());
        
-		} catch (UnauthorizedAccess uaa) {
+		} 
+        catch(UnauthorizedAccess uaa) {
 			System.out.println(uaa.getMessage());
 		}
     }
@@ -102,15 +136,19 @@ public class Client {
     	validResponse = false;
     	Assessment curr = null;
         
+    	System.out.println("\nEnter the course code of an assessment to begin the assessment:");
         while(!validResponse){
         	String lookup = in.nextLine();
+        	lookup = lookup.replaceAll("\\s+","");
         	try{
         		 curr = stub.getAssessment(token, studentId, lookup);
-        		validResponse = true;
-        	} catch (UnauthorizedAccess uaa){
+        		 validResponse = true;
+        	} 
+        	catch(UnauthorizedAccess uaa){
         		System.out.println(uaa.getMessage());
-        	} catch (NoMatchingAssessment nma){
         		System.out.println("Please enter a valid course code from list!");
+        	} 
+        	catch(NoMatchingAssessment nma){
         		System.out.println(nma.getMessage());
         	}
         }
@@ -119,22 +157,20 @@ public class Client {
     
     // Start selected assessment
     // Lists all questions and asks the client to select a question to answer
-    public static void startAssessment(Assessment a) throws RemoteException, UnauthorizedAccess, NoMatchingAssessment{
-		Scanner in = new Scanner(System.in);
+    public static void startAssessment(Assessment assess) throws RemoteException{
 		
-		System.out.println("\n" + a.getInformation());
-        List<Question> questions = a.getQuestions();
+		System.out.println("\n" + assess.getInformation());
+        List<Question> questions = assess.getQuestions();
         for(Question q : questions){
         	System.out.println(q.getQuestionNumber() + ") " + q.getQuestionDetail());
         }
         
         
         boolean continueFlag = true;
-        boolean validResponse = false;
-        String response;
         int qNumber = 0;
         Question quest = null;
         int ansNumber = 0;
+        validResponse = false;
         
         while(continueFlag){
 	        System.out.println("\nSelect a Question Number: ");
@@ -146,27 +182,20 @@ public class Client {
 				try{
 				    int n = Integer.parseInt(response);
 				    qNumber = n;
-				    
-			       	quest = a.getQuestion(qNumber);
+			       	quest = assess.getQuestion(qNumber);
 			        validResponse = true;
 				} 
-				catch (NumberFormatException e) {
+				catch(NumberFormatException e) {
 				    System.out.println("Invalid input! Please enter an integer!");
 				}
 		        catch(InvalidQuestionNumber e){
 		        	System.out.println("Invalid input! There is no question number " + qNumber);
-//		        	e.getMessage();
+		        	System.out.println(e.getMessage());
 		        }
-				
-		        
-
-			}
-	                
+			}	                
 	        validResponse = false;
 	        
-	        
-	        System.out.println("\n" + quest.getQuestionDetail());
-	        
+	        System.out.println("\n" + quest.getQuestionDetail());      
 	        String[] answers = quest.getAnswerOptions();
 	        
 	        for(int i = 0; i < answers.length; i++){
@@ -180,29 +209,28 @@ public class Client {
 	        	response = in.nextLine();
 				response = response.replaceAll("\\s+","");
 				
-				try {
+				try{
 				    int n = Integer.parseInt(response);
 				   	
-				   	ansNumber = n; //May be problem/confusion here down the line as Answer 1) = answer[0]
-				   	a.selectAnswer(quest.getQuestionNumber(), ansNumber);
+				   	ansNumber = n;
+				   	assess.selectAnswer(quest.getQuestionNumber(), ansNumber);
 				   	
 				   	validResponse = true;  
 				} 
-				catch (NumberFormatException e) {
+				catch(NumberFormatException e) {
 				    System.out.println("Invalid input! Please enter an integer!");
 				}
-				catch (InvalidOptionNumber e) {
+				catch(InvalidOptionNumber e) {
 					System.out.println("Invalid input! There is no answer number " + ansNumber);
 				} 
-				catch (InvalidQuestionNumber e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+				catch(InvalidQuestionNumber e) {
+					System.out.println(e.getMessage());
 				}
 				
 	        }
 			validResponse = false;
 	        
-	        System.out.println("\nContinue? [Y/n]: ");
+	        System.out.println("\nContinue answering questions? [Y/n]: ");
 	        
 	        while(!validResponse){
 				response = in.nextLine();
@@ -215,7 +243,7 @@ public class Client {
 					validResponse = true;
 					
 					if(response.equals("Y")){
-						System.out.println("\n" + a.getInformation());
+						System.out.println("\n" + assess.getInformation());
 						for(Question q : questions){
 				        	System.out.println(q.getQuestionNumber() + ") " + q.getQuestionDetail());
 				        }
@@ -241,15 +269,16 @@ public class Client {
 				validResponse = true;
 				
 				if(response.equals("Y")){
-					stub.submitAssessment(token, studentId, a);
-		        	System.out.println("Assessment submitted!");
-		        	
 		        	try{
-		        		stub.submitAssessment(token, studentId, a);
+		        		stub.submitAssessment(token, studentId, assess);
+		        		System.out.println("Assessment submitted!");
 		        	}
 		        	catch(NoMatchingAssessment e){
 		        		System.out.println(e.getMessage());
-		        	}
+		        	} 
+		        	catch(UnauthorizedAccess e) {	
+		        		System.out.println(e.getMessage());
+					}
 				}
 				else if(response.equals("n")){
 					System.out.println("Assessment not submitted");
@@ -257,6 +286,5 @@ public class Client {
 			}
 		}
         validResponse = false;
-        in.close();
 	}
 }

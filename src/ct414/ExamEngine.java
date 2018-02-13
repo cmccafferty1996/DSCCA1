@@ -7,24 +7,27 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class ExamEngine implements ExamServer {
 	
 	// Declare variables
 		private ArrayList<Integer> enrolledStudentIds;
 		private String password;
-		private int token;
+		private static int token;
+		private static long tokenTimeStamp;
+		private static long tokenTimeOut;
 		private String[] courseCodes;
 		private Map<String, AssessmentImpl> courseCodeToAssessmentMap;
 		private Map<String, Integer[]> courseCodeToStudentIdsMap;
 		private Map<Integer, List<Assessment>> completedAssessments;
 		
-	    // Constructor is required - add test data here
 	    public ExamEngine() {
 	    	
 	        super();
@@ -36,7 +39,11 @@ public class ExamEngine implements ExamServer {
 	        enrolledStudentIds.add(4);
 	        enrolledStudentIds.add(5);
 	        password = "topSecret";
-	        token = 1;
+	        
+	        //Create random token with a value between 1 and 100
+	        token = ThreadLocalRandom.current().nextInt(1, 100 + 1);
+	        tokenTimeStamp = System.currentTimeMillis();
+	        tokenTimeOut = 1000*40;
 	        
 	        // Separate them out into the different courses 
 	        Integer[] mathStudentIds = new Integer[] {1, 3, 5};
@@ -85,9 +92,21 @@ public class ExamEngine implements ExamServer {
 	        physicsQuestions.add(p3);
 	        
 	        // Define 3 new assessments - one for each course code
-	        AssessmentImpl a1 = new AssessmentImpl ("Math Test", new Date(2018, 2, 14), mathsQuestions, 1);
-	        AssessmentImpl a2 = new AssessmentImpl ("Chemistry Test", new Date(2017, 2, 14), chemQuestions, 1);
-	        AssessmentImpl a3 = new AssessmentImpl ("Physics Test", new Date(2016, 2, 14), physicsQuestions, 1);
+	        Calendar cal = Calendar.getInstance();
+	        cal.set(Calendar.YEAR, 2018);
+	    	cal.set(Calendar.MONTH, Calendar.JANUARY);
+	    	cal.set(Calendar.DAY_OF_MONTH, 1);
+	        AssessmentImpl a1 = new AssessmentImpl ("Math Test", cal.getTime(), mathsQuestions, 1);
+	        
+	        cal.set(Calendar.YEAR, 2018);
+	    	cal.set(Calendar.MONTH, Calendar.FEBRUARY);
+	    	cal.set(Calendar.DAY_OF_MONTH, 25);
+	        AssessmentImpl a2 = new AssessmentImpl ("Chemistry Test", cal.getTime(), chemQuestions, 2);
+	        
+	        cal.set(Calendar.YEAR, 2018);
+	    	cal.set(Calendar.MONTH, Calendar.FEBRUARY);
+	    	cal.set(Calendar.DAY_OF_MONTH, 14);
+	        AssessmentImpl a3 = new AssessmentImpl ("Physics Test", cal.getTime(), physicsQuestions, 3);
 	        
 	        // Store the current assessment available for each course code
 	        courseCodeToAssessmentMap = new HashMap<String, AssessmentImpl>();
@@ -107,10 +126,8 @@ public class ExamEngine implements ExamServer {
 	    	if (!enrolledStudentIds.contains(studentid) || !this.password.equals(password)) {
 	    		throw new UnauthorizedAccess("Invalid Id number or password");
 	    	}
-	    	
-	    	//Add token time stamp so after 2 hours the token is invalid? -MD
 
-	    	return 1;	
+	    	return token;	
 	    }
 
 	    // Return a summary list of Assessments currently available for this studentid
@@ -142,7 +159,7 @@ public class ExamEngine implements ExamServer {
 		    	if (!(courseCodeToAssessmentMap.get(i) == null)){
 		    		AssessmentImpl assessment = courseCodeToAssessmentMap.get(i);
 		    		assessmentsSummary.add(i+". "+assessment.getInformation()
-		    				+" closes on:"+assessment.getClosingDate().toString());
+		    				+" closes on: "+assessment.getClosingDate().toString());
 		    	}
 	    	}
 	    	
@@ -187,12 +204,33 @@ public class ExamEngine implements ExamServer {
 	    	// Meaning they have not missed the closing date/time
 	        Date now = new Date();
 	        if (completed.getClosingDate().before(now)){
-	    		throw new NoMatchingAssessment("Submission closed");
+	    		throw new NoMatchingAssessment("Submission closed for this assessment");
 	    	} 
 	        try{
 	        	// Add to completed list
 	        	ArrayList<Assessment> updated = (ArrayList<Assessment>) completedAssessments.get(studentid);
-	        	updated.add(completed);
+	        	
+	        	int i = 0;
+	        	boolean alreadySubmitted = false;
+	        	for (Assessment a: updated){
+	        		if(a.getAssociatedID() == completed.getAssociatedID()){
+	        			updated.set(i, completed);
+	        			alreadySubmitted = true;
+	        		}
+	        		i++;
+	        		
+	        	}
+	        	
+	        	if(alreadySubmitted == false){
+	        		updated.add(completed);
+	        	}
+	        	
+	        	for (Assessment a: updated){
+	        		
+	        		System.out.println(a.getInformation());
+	        	}
+	        	System.out.println();
+	        	
 	        	completedAssessments.put(studentid, updated);
 	        }
 	        catch(NullPointerException e){
@@ -205,9 +243,9 @@ public class ExamEngine implements ExamServer {
 
     public static void main(String[] args) {
     	
-        if (System.getSecurityManager() == null) {
-            System.setSecurityManager(new SecurityManager());
-        }
+//        if (System.getSecurityManager() == null) {
+//            System.setSecurityManager(new SecurityManager());
+//        }
         try {
             String name = "ExamServer";
             ExamServer engine = new ExamEngine();
@@ -216,6 +254,18 @@ public class ExamEngine implements ExamServer {
             Registry registry = LocateRegistry.getRegistry();
             registry.rebind(name, stub);
             System.out.println("ExamEngine bound");
+            
+            long currentTimeStamp;
+            while(true){
+            	currentTimeStamp = System.currentTimeMillis();
+            	
+            	if((currentTimeStamp - tokenTimeStamp) > tokenTimeOut){
+            		token = ThreadLocalRandom.current().nextInt(1, 100 + 1);
+        	        tokenTimeStamp = System.currentTimeMillis();
+            	}
+            }
+            
+            
         } catch (Exception e) {
             System.err.println("ExamEngine exception:");
             e.printStackTrace();
