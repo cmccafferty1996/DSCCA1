@@ -16,6 +16,7 @@ public class Client {
     private static int studentId = 0;
     private static ExamServer stub;
     private static int token = 0;
+    private static boolean firstLogin = false;
 
     private Client() {}
 
@@ -72,24 +73,29 @@ public class Client {
         }
     }
     
- // Private method that requests Student ID and password
+    // Private method that requests Student ID and password
     // Attempts to login by calling login function on server
     private static void doLogin() throws RemoteException{
     	
     	boolean login = false;
+    	validResponse = false;
     	while(!login){
-	    	while (!validResponse){
-	        	System.out.println("\nStudent ID: ");
-	            String userName = in.nextLine();
-	            try{
-	            	studentId = Integer.parseInt(userName);
-	            	validResponse = true;
-	            } 
-	            catch(NumberFormatException e){
-	            	System.out.println("Student ID must be a number!");
-	            }
-	        }
-	    	validResponse = false;
+    		//Stops user logging in as different user if they timeout
+    		if(!firstLogin){
+		    	while (!validResponse){
+		        	System.out.println("\nStudent ID: ");
+		            String userName = in.nextLine();
+		            try{
+		            	studentId = Integer.parseInt(userName);
+		            	validResponse = true;
+		            } 
+		            catch(NumberFormatException e){
+		            	System.out.println("Student ID must be a number!");
+		            }
+		        }
+		    	firstLogin = true;
+		    	validResponse = false;
+    		}
 	        
 	        System.out.println("Password: ");
 	        String password = in.nextLine();
@@ -126,6 +132,9 @@ public class Client {
 		} 
         catch(UnauthorizedAccess uaa) {
 			System.out.println(uaa.getMessage());
+			System.out.println("\nYour session timed out!\nPlease login again to continue.");
+			doLogin();
+			printAssessments();
 		}
     }
     
@@ -146,7 +155,9 @@ public class Client {
         	} 
         	catch(UnauthorizedAccess uaa){
         		System.out.println(uaa.getMessage());
-        		System.out.println("Please enter a valid course code from list!");
+        		System.out.println("\nYour session timed out!\nPlease login again to continue.");
+    			doLogin();
+    			System.out.println("\nEnter the course code of an assessment to begin the assessment:");
         	} 
         	catch(NoMatchingAssessment nma){
         		System.out.println(nma.getMessage());
@@ -266,22 +277,27 @@ public class Client {
 				System.out.println("Invalid input! Please enter \"Y\" or \"n\"\n");
 			}
 			else{
-				validResponse = true;
+				
 				
 				if(response.equals("Y")){
 		        	try{
 		        		stub.submitAssessment(token, studentId, assess);
 		        		System.out.println("Assessment submitted!");
+		        		validResponse = true;
 		        	}
 		        	catch(NoMatchingAssessment e){
 		        		System.out.println(e.getMessage());
 		        	} 
 		        	catch(UnauthorizedAccess e) {	
 		        		System.out.println(e.getMessage());
+		        		System.out.println("\nYour session timed out!\nPlease login again to continue.");
+		    			doLogin();
+		    			System.out.println("\nSubmit Assessment? [Y/n]");
 					}
 				}
 				else if(response.equals("n")){
 					System.out.println("Assessment not submitted");
+					validResponse = true;
 				}
 			}
 		}

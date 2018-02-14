@@ -40,12 +40,11 @@ public class ExamEngine implements ExamServer {
 	        enrolledStudentIds.add(5);
 	        password = "topSecret";
 	        
-	        //Create random token with a value between 1 and 100
-	        token = ThreadLocalRandom.current().nextInt(1, 100 + 1);
+	        // Create random token with a value between 1 and 1000
+	        token = ThreadLocalRandom.current().nextInt(1, 1000 + 1);
 	        tokenTimeStamp = System.currentTimeMillis();
-	        tokenTimeOut = 1000*40;
+	        tokenTimeOut = 1000*60*60*2; // 2 hour timeout
 	        
-	        // Separate them out into the different courses 
 	        Integer[] mathStudentIds = new Integer[] {1, 3, 5};
 	        Integer[] chemistryStudentIds = new Integer[] {1, 2, 4};
 	        Integer[] physicsStudentIds = new Integer[] {1, 2, 3};
@@ -105,7 +104,7 @@ public class ExamEngine implements ExamServer {
 	        
 	        cal.set(Calendar.YEAR, 2018);
 	    	cal.set(Calendar.MONTH, Calendar.FEBRUARY);
-	    	cal.set(Calendar.DAY_OF_MONTH, 14);
+	    	cal.set(Calendar.DAY_OF_MONTH, 24);
 	        AssessmentImpl a3 = new AssessmentImpl ("Physics Test", cal.getTime(), physicsQuestions, 3);
 	        
 	        // Store the current assessment available for each course code
@@ -118,7 +117,6 @@ public class ExamEngine implements ExamServer {
 	        completedAssessments = new HashMap<Integer, List<Assessment>>();
 	    }
 
-	    // Implement the methods defined in the ExamServer interface...
 	    // Return an access token that allows access to the server for some time period
 	    public int login(int studentid, String password) throws 
 	                UnauthorizedAccess, RemoteException {
@@ -134,7 +132,6 @@ public class ExamEngine implements ExamServer {
 	    public List<String> getAvailableSummary(int token, int studentid) throws
 	                UnauthorizedAccess, NoMatchingAssessment, RemoteException {
 	    	
-	    	// Token exception
 	    	if(this.token != token){
 	    		throw new UnauthorizedAccess("Invalid Access Token");
 	    	}
@@ -155,8 +152,9 @@ public class ExamEngine implements ExamServer {
 	    	}
 	    	
 	    	// Check for available assessments for that course code
+	    	Date now = new Date();
 	    	for(String i :currCodes){
-		    	if (!(courseCodeToAssessmentMap.get(i) == null)){
+		    	if (!(courseCodeToAssessmentMap.get(i) == null) && courseCodeToAssessmentMap.get(i).getClosingDate().after(now)){
 		    		AssessmentImpl assessment = courseCodeToAssessmentMap.get(i);
 		    		assessmentsSummary.add(i+". "+assessment.getInformation()
 		    				+" closes on: "+assessment.getClosingDate().toString());
@@ -174,15 +172,14 @@ public class ExamEngine implements ExamServer {
 	    public Assessment getAssessment(int token, int studentid, String courseCode) throws
 	                UnauthorizedAccess, NoMatchingAssessment, RemoteException {
 	    	
-	    	// Token exception
 	    	if(this.token != token){
 	    		throw new UnauthorizedAccess("Invalid Access Token");
 	    	}
 	    	else if(!Arrays.asList(courseCodes).contains(courseCode)){
-	    		throw new UnauthorizedAccess("This course does not exist");
+	    		throw new NoMatchingAssessment("This course does not exist");
 	    	}
 	    	else if(!Arrays.asList(courseCodeToStudentIdsMap.get(courseCode)).contains(studentid)){
-	    		throw new UnauthorizedAccess("Student Id not valid for this course");
+	    		throw new NoMatchingAssessment("Student Id not valid for this course");
 	    	}
 	    	else if(courseCodeToAssessmentMap.get(courseCode) == null){
 	    		throw new NoMatchingAssessment("No assignment for this course");
@@ -195,7 +192,6 @@ public class ExamEngine implements ExamServer {
 	    public void submitAssessment(int token, int studentid, Assessment completed) throws 
 	                UnauthorizedAccess, NoMatchingAssessment, RemoteException {
 	    	
-	    	// Token exception
 	    	if(this.token != token){
 	    		throw new UnauthorizedAccess("Invalid Access Token");
 	    	}
@@ -207,7 +203,7 @@ public class ExamEngine implements ExamServer {
 	    		throw new NoMatchingAssessment("Submission closed for this assessment");
 	    	} 
 	        try{
-	        	// Add to completed list
+	        	// Add to completed assessment arrayList
 	        	ArrayList<Assessment> updated = (ArrayList<Assessment>) completedAssessments.get(studentid);
 	        	
 	        	int i = 0;
@@ -225,12 +221,6 @@ public class ExamEngine implements ExamServer {
 	        		updated.add(completed);
 	        	}
 	        	
-	        	for (Assessment a: updated){
-	        		
-	        		System.out.println(a.getInformation());
-	        	}
-	        	System.out.println();
-	        	
 	        	completedAssessments.put(studentid, updated);
 	        }
 	        catch(NullPointerException e){
@@ -243,9 +233,9 @@ public class ExamEngine implements ExamServer {
 
     public static void main(String[] args) {
     	
-//        if (System.getSecurityManager() == null) {
-//            System.setSecurityManager(new SecurityManager());
-//        }
+        if (System.getSecurityManager() == null) {
+            System.setSecurityManager(new SecurityManager());
+        }
         try {
             String name = "ExamServer";
             ExamServer engine = new ExamEngine();
