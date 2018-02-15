@@ -45,8 +45,7 @@ public class Client {
 	            if (curr != null){
 	            	startAssessment(curr);
 	            }
-	            
-	            
+	            // After completing an assessment
 	            System.out.println("\nDo you want to try another assessment?[Y/n] ");
 	            while(!validResponse){
 	    			response = in.nextLine();
@@ -57,7 +56,6 @@ public class Client {
 	    			}
 	    			else{
 	    				validResponse = true;
-	    				
 	    				if(response.equals("n")){
 	    		        	continueFlag = true;
 	    				}
@@ -65,6 +63,7 @@ public class Client {
 	    		}
 	            validResponse = false;
             }
+            // Terminate programe
             System.out.println("\nUser " + studentId + " logged out.");
             in.close();
         } catch(Exception e) {
@@ -86,6 +85,7 @@ public class Client {
 		        	System.out.println("\nStudent ID: ");
 		            String userName = in.nextLine();
 		            try{
+		            	// must be an integer
 		            	studentId = Integer.parseInt(userName);
 		            	validResponse = true;
 		            } 
@@ -96,10 +96,10 @@ public class Client {
 		    	firstLogin = true;
 		    	validResponse = false;
     		}
-	        
+	        // Read password
 	        System.out.println("Password: ");
 	        String password = in.nextLine();
-	        
+	        // Attempt login
 	        try{
 				token = stub.login(studentId, password);
 				System.out.println("\nLogin Successful!");
@@ -122,7 +122,7 @@ public class Client {
         	ArrayList<String> summary = 
         			(ArrayList<String>) stub.getAvailableSummary(token, studentId);
         	for (String s : summary){
-        		System.out.println(s);
+        		System.out.println(s); // Print summary
         	}
         	
         } 
@@ -144,10 +144,10 @@ public class Client {
     	
     	validResponse = false;
     	Assessment curr = null;
-        
+        // Prompt user
     	System.out.println("\nEnter the course code of an assessment to begin the assessment:");
         while(!validResponse){
-        	String lookup = in.nextLine();
+        	String lookup = in.nextLine(); // course code entered
         	lookup = lookup.replaceAll("\\s+","");
         	try{
         		 curr = stub.getAssessment(token, studentId, lookup);
@@ -172,10 +172,10 @@ public class Client {
 		
 		System.out.println("\n" + assess.getInformation());
         List<Question> questions = assess.getQuestions();
+        // Print question details - not answers yet
         for(Question q : questions){
         	System.out.println(q.getQuestionNumber() + ") " + q.getQuestionDetail());
         }
-        
         
         boolean continueFlag = true;
         int qNumber = 0;
@@ -191,7 +191,7 @@ public class Client {
 				response = response.replaceAll("\\s+","");
 				
 				try{
-				    int n = Integer.parseInt(response);
+				    int n = Integer.parseInt(response); // Must be integer
 				    qNumber = n;
 			       	quest = assess.getQuestion(qNumber);
 			        validResponse = true;
@@ -237,7 +237,6 @@ public class Client {
 				catch(InvalidQuestionNumber e) {
 					System.out.println(e.getMessage());
 				}
-				
 	        }
 			validResponse = false;
 	        
@@ -266,22 +265,22 @@ public class Client {
 			}
 	        validResponse = false;
         }
-	        
+	    
+        // Submit assessment section
         System.out.println("\nSubmit Assessment? [Y/n]");
         
         while(!validResponse){
 			response = in.nextLine();
 			response = response.replaceAll("\\s+","");
-			
+			// Catch invalid responses
 			if(!response.equals("Y") && !response.equals("n")){
 				System.out.println("Invalid input! Please enter \"Y\" or \"n\"\n");
 			}
 			else{
-				
-				
 				if(response.equals("Y")){
 		        	try{
 		        		validResponse = true;
+		        		// Do submit
 		        		stub.submitAssessment(token, studentId, assess);
 		        		System.out.println("Assessment submitted!");
 		        	}

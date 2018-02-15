@@ -16,8 +16,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class ExamEngine implements ExamServer {
-	
-	// Declare variables
+		// Declare variables
 		private ArrayList<Integer> enrolledStudentIds;
 		private String password;
 		private static int token;
@@ -194,8 +193,7 @@ public class ExamEngine implements ExamServer {
 	    	
 	    	if(this.token != token){
 	    		throw new UnauthorizedAccess("Invalid Access Token");
-	    	}
-	    	
+	    	}	
 	    	// Check the assessment is still available
 	    	// Meaning they have not missed the closing date/time
 	        Date now = new Date();
@@ -214,13 +212,10 @@ public class ExamEngine implements ExamServer {
 	        			alreadySubmitted = true;
 	        		}
 	        		i++;
-	        		
 	        	}
-	        	
 	        	if(alreadySubmitted == false){
 	        		updated.add(completed);
 	        	}
-	        	
 	        	completedAssessments.put(studentid, updated);
 	        }
 	        catch(NullPointerException e){
@@ -248,14 +243,12 @@ public class ExamEngine implements ExamServer {
             long currentTimeStamp;
             while(true){
             	currentTimeStamp = System.currentTimeMillis();
-            	
+            	// Token check
             	if((currentTimeStamp - tokenTimeStamp) > tokenTimeOut){
             		token = ThreadLocalRandom.current().nextInt(1, 100 + 1);
         	        tokenTimeStamp = System.currentTimeMillis();
             	}
-            }
-            
-            
+            } 
         } catch (Exception e) {
             System.err.println("ExamEngine exception:");
             e.printStackTrace();
