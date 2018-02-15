@@ -281,9 +281,9 @@ public class Client {
 				
 				if(response.equals("Y")){
 		        	try{
+		        		validResponse = true;
 		        		stub.submitAssessment(token, studentId, assess);
 		        		System.out.println("Assessment submitted!");
-		        		validResponse = true;
 		        	}
 		        	catch(NoMatchingAssessment e){
 		        		System.out.println(e.getMessage());
